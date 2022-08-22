@@ -1,7 +1,7 @@
 
 import subprocess
 
-MODE = "condor"
+MODE = "lsf"
 
 machines = {}
 total_gpus = 0
@@ -24,7 +24,15 @@ device_map = {
     "Tesla V100-SXM2-16GB": "NVIDIA Tesla V100 SXM2 16 GB",
     "Tesla P100-PCIE-16GB": "NVIDIA Tesla P100 PCIe 16 GB",
     "NVIDIA A100-SXM4-40GB": "NVIDIA A100 SXM4 40 GB",
-    "NVIDIA Quadro RTX 6000": "NVIDIA Quadro RTX 6000"
+    "NVIDIA Quadro RTX 6000": "NVIDIA Quadro RTX 6000",
+    "NVIDIAGeForceGTX1080Ti": "NVIDIA GeForce GTX 1080 Ti",
+    "NVIDIAGeForceGTX1080": "NVIDIA GeForce GTX 1080",
+    "NVIDIAGeForceRTX2080Ti": "NVIDIA GeForce RTX 2080 Ti",
+    "NVIDIAGeForceRTX3090": "NVIDIA GeForce RTX 3090",
+    "NVIDIATITANRTX": "NVIDIA TITAN RTX",
+    "QuadroRTX6000": "NVIDIA Quadro RTX 6000",
+    "TeslaV100_SXM2_32GB": "NVIDIA Tesla V100 SXM2 32 GB",
+    "NVIDIAA100_PCIE_40GB": "NVIDIA A100 PCIe"
 }
 
 # (FP32 TFLOPS, TENSOR TFLOPS, MEMORY GB, BANDWIDTH GB/S, SOURCE)
@@ -41,7 +49,10 @@ devices = {
     "NVIDIA A40 PCIe": (37.4, 149.7, 48, 696, "https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf"),
     "NVIDIA Tesla V100 SXM2 16 GB": (15.7, 125, 16, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf"),
     "NVIDIA Tesla P100 PCIe 16 GB": (14, 112, 16, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf" ),
-    "NVIDIA Quadro RTX 6000": (16.3, 130.5, 24, 672, "https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/quadro-rtx-6000-us-nvidia-704093-r4-web.pdf")
+    "NVIDIA Quadro RTX 6000": (16.3, 130.5, 24, 672, "https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/quadro-rtx-6000-us-nvidia-704093-r4-web.pdf"),
+    "NVIDIA GeForce GTX 1080 Ti": (11.34, 11.34, 11, 484, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877"),
+    "NVIDIA GeForce GTX 1080": (8.873, 8.873, 8, 320, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080.c2839"),
+    "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf")
 }
 
 if MODE == "slurm":
@@ -165,7 +176,6 @@ if MODE == "lsf":
         continue
       avail = l.split()[4]
       machines[machine_name]["avail"] = float(avail)
-      total_gpus = total_gpus + float(avail)
       break
 
 print ("Total GPUs", total_gpus)
@@ -182,7 +192,7 @@ for machine_name in machines:
     print(machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp16)
   
 
-print devices
+print (devices)
 
 
 """

@@ -100,7 +100,7 @@ if args.mode == "slurm":
       valid = False
 
       for prefix in args.slurm_partition_prefixes:
-        if host.startswith(prefix): valid = True
+        if hostname.startswith(prefix): valid = True
       
       if valid == False:
         continue

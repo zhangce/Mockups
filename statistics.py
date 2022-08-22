@@ -292,6 +292,7 @@ import requests
 res = requests.post('https://planetd.shift.ml/site_stats', json={
   "timestamp": time.time(),
   "site_identifier": args.site,
+  "scheduler_type": args.mode,
   "total_tflops": total_fp16,
   "avail_tflops": avail_fp16,
   "total_gpus": total_gpus,
@@ -302,6 +303,7 @@ res = requests.post('https://planetd.shift.ml/site_stats', json={
 
 print ({"timestamp": time.time(),
   "site_identifier": args.site,
+  "scheduler_type": args.mode,
   "total_tflops": total_fp16,
   "avail_tflops": avail_fp16,
   "total_gpus": total_gpus,

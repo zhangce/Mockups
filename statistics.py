@@ -11,10 +11,15 @@ parser = argparse.ArgumentParser(prog='statistics.py')
 #
 parser.add_argument('mode',  choices={"slurm", "lsf", "condor"})
 
+# Identifier of each site 
+#
+parser.add_argument('site', choices={'stanford.edu', 'ethz.ch', 'osg-htc.org'})
+
 # If Slurm cluster, we can filter by the prefixes of 
 # a partition that can be used by Together
 #
 parser.add_argument('--slurm-partition-prefixes', nargs='+')
+
 
 args = parser.parse_args()
 
@@ -84,7 +89,7 @@ devices = {
 
 if args.mode == "slurm":
 
-  logging.warning("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
+  logging.warning("Slurm Cluster; Site %s; Partitions %s", args.site, args.slurm_partition_prefixes)
 
   proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -132,6 +137,8 @@ if args.mode == "slurm":
         machines[hostname]["avail"] = ngpus - nalloc
 
 if args.mode == "condor":
+
+  logging.warning("Condor Cluster; Site %s", args.site)
 
   import htcondor
   coll = htcondor.Collector()
@@ -183,6 +190,8 @@ if args.mode == "condor":
     logging.warning("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
 
 if args.mode == "lsf":
+
+  logging.warning("LSF Cluster; Site %s", args.site)
 
   proc = subprocess.Popen(["lsload -gpuload -w"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -256,16 +265,13 @@ logging.warning("Avail GPUs: %s", avail_gpus)
 logging.warning("Total FP16: %s %s", total_fp16, "TFLOPS")
 logging.warning("Avail FP16: %s %s", avail_fp16, "TFLOPS")
 
-"""
-import requests
 
+import requests
 res = requests.post('https://planetd.shift.ml/site_stats', json={
-    "site_identifier": "stanford.edu"   ,# "ethz.ch", # "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
-  "total_perfs": total_gpus * 50,
-  "num_gpu": total_gpus,
+  "site_identifier": args.site   ,# "ethz.ch", # "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
+  "total_perfs": avail_fp16,
+  "num_gpu": avail_gpus,
   "num_cpu": 0,
   "note": "string"
 })
 
-print devices
-"""

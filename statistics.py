@@ -268,7 +268,7 @@ for machine_name in machines:
     avail_gpus = avail_gpus + machines[machine_name]["avail"]
     avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-    logging.warning("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+    logging.warning("%s %s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16, device)
 
     machines_available[machine_name] = {}
     machines_available[machine_name]["gpu_model_local"] = device

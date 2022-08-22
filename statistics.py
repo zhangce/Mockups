@@ -52,7 +52,8 @@ device_map = {
     "NVIDIATITANRTX": "NVIDIA TITAN RTX",
     "QuadroRTX6000": "NVIDIA Quadro RTX 6000",
     "TeslaV100_SXM2_32GB": "NVIDIA Tesla V100 SXM2 32 GB",
-    "NVIDIAA100_PCIE_40GB": "NVIDIA A100 PCIe"
+    "NVIDIAA100_PCIE_40GB": "NVIDIA A100 PCIe",
+    None: None
 }
 
 # Devices
@@ -74,7 +75,8 @@ devices = {
     "NVIDIA Quadro RTX 6000": (16.3, 130.5, 24, 672, "https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/quadro-rtx-6000-us-nvidia-704093-r4-web.pdf"),
     "NVIDIA GeForce GTX 1080 Ti": (11.34, 11.34, 11, 484, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877"),
     "NVIDIA GeForce GTX 1080": (8.873, 8.873, 8, 320, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080.c2839"),
-    "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf")
+    "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf"),
+    None: (8.873, 8.873, 8, 320, "NVIDIA GeForce GTX 1080") # if we cannot get GPU info, we assume it is a weak one
 }
 
 
@@ -144,8 +146,6 @@ if args.mode == "condor":
       continue
     detected_gpus = detected_gpus.split(", ")
 
-    print (detected_gpus)
-
     machine_name = ad.get("Name").__repr__()
 
     if machine_name not in machines:
@@ -160,8 +160,6 @@ if args.mode == "condor":
       if gpuinfo is None: continue
       devicename = gpuinfo.get("DeviceName")
 
-      print(gpurepr, gpuinfo, devicename)
-
       machines[machine_name]["gpu_model"] = devicename
       machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
 
@@ -175,6 +173,9 @@ if args.mode == "condor":
 
       if gpuinfo is None: continue
       
+      if machines[machine_name]["gpu_model"] is None:
+        machines[machine_name]["gpu_model"] = gpuinfo.get("DeviceName")
+
       machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
 
     logging.warn("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])

@@ -1,10 +1,57 @@
 
 import subprocess
 
-MODE = "condor"
+MODE = "slurm"
 
 machines = {}
 total_gpus = 0
+
+
+if MODE == "slurm":
+
+    proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
+    (out, err) = proc.communicate()
+    out = out.decode("utf-8")
+
+    for l in out.split("\n"):
+        fields = l.split()
+
+        if not (len(fields) >= 7):
+            continue
+            
+
+        hostname = fields[0]
+        gres = fields[7]
+        jobs = fields[8:]
+
+        # NLP Cluster
+        if "jagupard" not in hostname:
+            continue
+
+        #print(hostname, gres, jobs)
+
+        import re
+        m = re.search(r'^gpu:(.*?):([0-9]*)$', gres)
+        if m:
+            devicename = m.group(1)
+            ngpus = int(m.group(2))
+
+            nalloc = 0
+            for i in range(2, len(jobs), 3):
+                m = re.search(r'^gpu.*?:([0-9]*)$', jobs[i])
+                if m:
+                    nalloc = nalloc + int(m.group(1))
+            
+            print(hostname, devicename, ngpus, nalloc)
+
+            if hostname not in machines:
+                machines[hostname] = {}
+                machines[hostname]["gpu_model"] = devicename
+                machines[hostname]["n_gpu"] = ngpus
+                machines[hostname]["avail"] = ngpus - nalloc
+
+            
+            total_gpus = total_gpus + (ngpus - nalloc)    
 
 
 if MODE == "condor":
@@ -37,7 +84,7 @@ if MODE == "condor":
 
 			print(machine_name, devicename)
 
-print("######")
+#print("######")
 
 
 if MODE == "lsf":
@@ -91,7 +138,7 @@ for machine_name in machines:
 import requests
 
 res = requests.post('https://planetd.shift.ml/site_stats', json={
-  "site_identifier": "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
+    "site_identifier": "stanford.edu"   ,# "ethz.ch", # "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
   "total_perfs": total_gpus * 50,
   "num_gpu": total_gpus,
   "num_cpu": 0,

@@ -1,16 +1,34 @@
 
 import subprocess
+import argparse
+import logging
+import re
 
-MODE = "lsf"
+parser = argparse.ArgumentParser(prog='statistics.py')
 
+# Type of a given cluster
+#
+parser.add_argument('mode',  choices={"slurm", "lsf", "condor"})
+
+# If Slurm cluster, we can filter by the prefixes of 
+# a partition that can be used by Together
+#
+parser.add_argument('--slurm-partition-prefixes', nargs='+')
+
+args = parser.parse_args()
+
+# Collected Statistics are stored here
+# machines = {
+#    machine_name : {
+#       gpu_model : X  # string that can be looked up in `device_map``
+#       ngpu      : Y  # int, total number of GPUs
+#       avail     : Z  # int, total number of GPUs available
+#    }
+# }
 machines = {}
-total_gpus = 0
 
-#devices = {}
-
-# {u'titanxp': 1, u'titanrtx': 1, u'a5000': 1, u'3090': 1, u'titanx:2,gpu:titanxp': 1, u'titanx:1,gpu:2080ti': 1, u'titanx': 1, u'titanv': 1}
-
-
+# Name of devices to its canonical name (that can be looked up in `devices`) 
+#
 device_map = {
     "titanxp" : "NVIDIA TITAN Xp",
     "titanrtx" : "NVIDIA TITAN RTX" ,
@@ -35,7 +53,9 @@ device_map = {
     "NVIDIAA100_PCIE_40GB": "NVIDIA A100 PCIe"
 }
 
-# (FP32 TFLOPS, TENSOR TFLOPS, MEMORY GB, BANDWIDTH GB/S, SOURCE)
+# Devices
+# Device Canonical Name => (FP32 TFLOPS, TENSOR TFLOPS, MEMORY GB, BANDWIDTH GB/S, SOURCE)
+#
 devices = {
     "NVIDIA TITAN Xp" : (12.15, 12.15, 12, 547.6, "https://www.techpowerup.com/gpu-specs/titan-xp.c2948"),
     "NVIDIA TITAN RTX" : (16.31, 32.62, 24, 672, "https://www.techpowerup.com/gpu-specs/titan-rtx.c3311"),
@@ -55,51 +75,57 @@ devices = {
     "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf")
 }
 
-if MODE == "slurm":
 
-    proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
-    (out, err) = proc.communicate()
-    out = out.decode("utf-8")
+if args.mode == "slurm":
 
-    for l in out.split("\n"):
-        fields = l.split()
+  logging.info("Slurm Cluster; Partitions", args.slurm_partition_prefixes)
 
-        if not (len(fields) >= 7):
-            continue
+  proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
+  (out, err) = proc.communicate()
+  out = out.decode("utf-8")
+
+  for l in out.split("\n"):
+    fields = l.split()
+
+    # a content line should have at least 7 fields
+    if not (len(fields) >= 7):
+      continue
             
+    hostname = fields[0]
+    gres = fields[7]
+    jobs = fields[8:]
 
-        hostname = fields[0]
-        gres = fields[7]
-        jobs = fields[8:]
+    # filter by args.slurm_partition_prefixes
+    if args.slurm_partition_prefixes is not None:
+      valid = False
 
-        # NLP Cluster
-        if "jagupard" not in hostname:
-            continue
+      for prefix in args.slurm_partition_prefixes:
+        if host.startswith(prefix): valid = True
+      
+      if valid == False:
+        continue
 
-        #print(hostname, gres, jobs)
+    # find GPUs
+    m = re.search(r'^gpu:(.*?):([0-9]*)$', gres)
+    if m:
+      devicename = m.group(1)
+      ngpus = int(m.group(2))
 
-        import re
-        m = re.search(r'^gpu:(.*?):([0-9]*)$', gres)
+      nalloc = 0
+      for i in range(2, len(jobs), 3):
+        m = re.search(r'^gpu.*?:([0-9]*)$', jobs[i])
         if m:
-            devicename = m.group(1)
-            ngpus = int(m.group(2))
+          nalloc = nalloc + int(m.group(1))
+    
+      logging.debug(hostname, devicename, ngpus, nalloc)
 
-            nalloc = 0
-            for i in range(2, len(jobs), 3):
-                m = re.search(r'^gpu.*?:([0-9]*)$', jobs[i])
-                if m:
-                    nalloc = nalloc + int(m.group(1))
-            
-            print(hostname, devicename, ngpus, nalloc)
+      if hostname not in machines:
+        machines[hostname] = {}
+        machines[hostname]["gpu_model"] = devicename
+        machines[hostname]["n_gpu"] = ngpus
+        machines[hostname]["avail"] = ngpus - nalloc
 
-            if hostname not in machines:
-                machines[hostname] = {}
-                machines[hostname]["gpu_model"] = devicename
-                machines[hostname]["n_gpu"] = ngpus
-                machines[hostname]["avail"] = ngpus - nalloc
-
-            #devices[devicename] = 1
-
+"""
 
 if MODE == "condor":
 	import htcondor
@@ -178,21 +204,35 @@ if MODE == "lsf":
       machines[machine_name]["avail"] = float(avail)
       break
 
-print ("Total GPUs", total_gpus)
+print ("Total GPUs", total_gpus)  
+"""
+
+
+total_gpus = 0
+avail_gpus = 0
+
+total_fp16 = 0
+avail_fp16 = 0
 
 for machine_name in machines:
+  device = machines[machine_name]["gpu_model"]
+  if device not in device_map:
+    logging.warn("UNKNOWN DEVICES", device)
+    continue
+  (fp32, fp16, mem, band, source) = devices[device_map[device]]
 
-    device = machines[machine_name]["gpu_model"]
-    if device not in device_map:
-        print ("UNKNOWN DEVICES", device)
-        continue
+  total_gpus = total_gpus + machines[machine_name]["n_gpu"]
+  avail_gpus = avail_gpus + machines[machine_name]["avail"]
 
-    (fp32, fp16, mem, band, source) = devices[device_map[device]]
-    
-    print(machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp16)
-  
+  total_fp16 = total_fp16 + fp16 * machines[machine_name]["n_gpu"]
+  avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-print (devices)
+  logging.debug(machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+
+logging.info("Total GPUs:", total_gpus)
+logging.info("Avail GPUs:", avail_gpus)
+logging.info("Total FP16:", total_fp16, "TFLOPS")
+logging.info("Avail FP16:", avail_fp16, "TFLOPS")
 
 
 """

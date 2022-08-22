@@ -4,6 +4,9 @@ import argparse
 import logging
 import re
 
+logger = logging.getLogger('statistics.py')
+logger.setLevel(logging.INFO)
+
 parser = argparse.ArgumentParser(prog='statistics.py')
 
 # Type of a given cluster

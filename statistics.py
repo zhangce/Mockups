@@ -232,8 +232,8 @@ for machine_name in machines:
 
 logging.warn("Total GPUs: %s", total_gpus)
 logging.warn("Avail GPUs: %s", avail_gpus)
-logging.warn("Total FP16: %s", total_fp16, "TFLOPS")
-logging.warn("Avail FP16: %s", avail_fp16, "TFLOPS")
+logging.warn("Total FP16: %s %s", total_fp16, "TFLOPS")
+logging.warn("Avail FP16: %s %s", avail_fp16, "TFLOPS")
 
 
 """

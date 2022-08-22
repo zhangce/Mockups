@@ -33,6 +33,7 @@ machines = {}
 device_map = {
     "titanxp" : "NVIDIA TITAN Xp",
     "titanrtx" : "NVIDIA TITAN RTX" ,
+    "a100": "NVIDIA A100 PCIe",
     "a5000" : "NVIDIA RTX A5000"   ,
     "3090" : "NVIDIA GeForce RTX 3090"         ,
     "2080ti": "NVIDIA GeForce RTX 2080 Ti"        ,

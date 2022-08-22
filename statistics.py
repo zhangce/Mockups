@@ -249,7 +249,8 @@ for machine_name in machines:
   total_fp16 = total_fp16 + fp16 * machines[machine_name]["n_gpu"]
   avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-  logging.warn("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+  if machines[machine_name]["avail"] > 0:
+    logging.warn("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
 
 logging.warn("Total GPUs: %s", total_gpus)
 logging.warn("Avail GPUs: %s", avail_gpus)

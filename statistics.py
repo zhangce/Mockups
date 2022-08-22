@@ -144,6 +144,8 @@ if args.mode == "condor":
       continue
     detected_gpus = detected_gpus.split(", ")
 
+    print (detected_gpus)
+
     machine_name = ad.get("Name").__repr__()
 
     if machine_name not in machines:

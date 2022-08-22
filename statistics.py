@@ -1,10 +1,44 @@
 
 import subprocess
 
-MODE = "lsf"
+MODE = "condor"
 
 machines = {}
 total_gpus = 0
+
+
+if MODE == "condor":
+	import htcondor
+	coll = htcondor.Collector()
+	ads = coll.query()
+
+	for ad in ads:
+		avail_gpus = ad.get("AvailableGPUs")
+		if avail_gpus is None or avail_gpus == []:
+			continue
+
+		machine_name = ad.get("Name").__repr__()
+		for gpu in avail_gpus:
+			gpurepr = gpu.__repr__()
+			gpuinfo = ad.get(gpurepr)
+
+			if gpuinfo is None: continue
+
+			devicename = gpuinfo.get("DeviceName")
+			total_gpus = total_gpus  + 1
+			
+			if machine_name not in machines:
+				machines[machine_name] = {}
+				machines[machine_name]["gpu_model"] = devicename
+				machines[machine_name]["n_gpu"] = 0
+				machines[machine_name]["avail"] = 0
+			machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
+			machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
+
+			print(machine_name, devicename)
+
+print("######")
+
 
 if MODE == "lsf":
 
@@ -57,7 +91,7 @@ for machine_name in machines:
 import requests
 
 res = requests.post('https://planetd.shift.ml/site_stats', json={
-  "site_identifier": "ethz.ch", # "stanford.edu", # ethz.ch; osg-htc.org
+  "site_identifier": "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
   "total_perfs": total_gpus * 50,
   "num_gpu": total_gpus,
   "num_cpu": 0,

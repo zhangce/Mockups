@@ -271,7 +271,8 @@ for machine_name in machines:
     logging.warning("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
 
     machines_available[machine_name] = {}
-    machines_available[machine_name]["gpu_model"] = device
+    machines_available[machine_name]["gpu_model_local"] = device
+    machines_available[machine_name]["gpu_model_global"] = canonical_device
     machines_available[machine_name]["gpu_property"] = {
       "fp32_tflops": fp32,
       "fp16_tflops": fp16,

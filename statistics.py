@@ -127,7 +127,7 @@ if args.mode == "slurm":
         machines[hostname]["n_gpu"] = ngpus
         machines[hostname]["avail"] = ngpus - nalloc
 
-if MODE == "condor":
+if args.mode == "condor":
 
   import htcondor
   coll = htcondor.Collector()

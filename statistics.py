@@ -4,8 +4,6 @@ import argparse
 import logging
 import re
 
-logger = logging.getLogger('statistics.py')
-logger.setLevel(logging.INFO)
 
 parser = argparse.ArgumentParser(prog='statistics.py')
 
@@ -81,7 +79,7 @@ devices = {
 
 if args.mode == "slurm":
 
-  logger.info("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
+  logging.warn("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
 
   proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -120,7 +118,7 @@ if args.mode == "slurm":
         if m:
           nalloc = nalloc + int(m.group(1))
     
-      logger.debug("%s %s %s %s", hostname, devicename, ngpus, nalloc)
+      logging.warn("%s %s %s %s", hostname, devicename, ngpus, nalloc)
 
       if hostname not in machines:
         machines[hostname] = {}
@@ -220,7 +218,7 @@ avail_fp16 = 0
 for machine_name in machines:
   device = machines[machine_name]["gpu_model"]
   if device not in device_map:
-    logger.warn("UNKNOWN DEVICES %s", device)
+    logging.warn("UNKNOWN DEVICES %s", device)
     continue
   (fp32, fp16, mem, band, source) = devices[device_map[device]]
 
@@ -230,12 +228,12 @@ for machine_name in machines:
   total_fp16 = total_fp16 + fp16 * machines[machine_name]["n_gpu"]
   avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-  logger.debug("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+  logging.warn("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
 
-logger.info("Total GPUs: %s", total_gpus)
-logger.info("Avail GPUs: %s", avail_gpus)
-logger.info("Total FP16: %s", total_fp16, "TFLOPS")
-logger.info("Avail FP16: %s", avail_fp16, "TFLOPS")
+logging.warn("Total GPUs: %s", total_gpus)
+logging.warn("Avail GPUs: %s", avail_gpus)
+logging.warn("Total FP16: %s", total_fp16, "TFLOPS")
+logging.warn("Avail FP16: %s", avail_fp16, "TFLOPS")
 
 
 """

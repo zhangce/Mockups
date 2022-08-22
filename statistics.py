@@ -84,7 +84,7 @@ devices = {
 
 if args.mode == "slurm":
 
-  logging.warn("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
+  logging.warning("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
 
   proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -123,7 +123,7 @@ if args.mode == "slurm":
         if m:
           nalloc = nalloc + int(m.group(1))
     
-      logging.warn("%s %s %s %s", hostname, devicename, ngpus, ngpus - nalloc)
+      logging.warning("%s %s %s %s", hostname, devicename, ngpus, ngpus - nalloc)
 
       if hostname not in machines:
         machines[hostname] = {}
@@ -180,7 +180,7 @@ if args.mode == "condor":
 
       machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
 
-    logging.warn("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
+    logging.warning("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
 
 if args.mode == "lsf":
 
@@ -238,7 +238,7 @@ avail_fp16 = 0
 for machine_name in machines:
   device = machines[machine_name]["gpu_model"]
   if device not in device_map:
-    logging.warn("UNKNOWN DEVICES %s", device)
+    logging.warning("UNKNOWN DEVICES %s", device)
     continue
   (fp32, fp16, mem, band, source) = devices[device_map[device]]
 
@@ -249,12 +249,12 @@ for machine_name in machines:
   avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
   if machines[machine_name]["avail"] > 0:
-    logging.warn("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+    logging.warning("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
 
-logging.warn("Total GPUs: %s", total_gpus)
-logging.warn("Avail GPUs: %s", avail_gpus)
-logging.warn("Total FP16: %s %s", total_fp16, "TFLOPS")
-logging.warn("Avail FP16: %s %s", avail_fp16, "TFLOPS")
+logging.warning("Total GPUs: %s", total_gpus)
+logging.warning("Avail GPUs: %s", avail_gpus)
+logging.warning("Total FP16: %s %s", total_fp16, "TFLOPS")
+logging.warning("Avail FP16: %s %s", avail_fp16, "TFLOPS")
 
 """
 import requests

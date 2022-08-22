@@ -53,6 +53,7 @@ device_map = {
     "QuadroRTX6000": "NVIDIA Quadro RTX 6000",
     "TeslaV100_SXM2_32GB": "NVIDIA Tesla V100 SXM2 32 GB",
     "NVIDIAA100_PCIE_40GB": "NVIDIA A100 PCIe",
+    "NVIDIA RTX A5000": "NVIDIA RTX A5000",
     None: None
 }
 
@@ -76,7 +77,8 @@ devices = {
     "NVIDIA GeForce GTX 1080 Ti": (11.34, 11.34, 11, 484, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877"),
     "NVIDIA GeForce GTX 1080": (8.873, 8.873, 8, 320, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080.c2839"),
     "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf"),
-    None: (16.3, 130.5, 24, 672, "NVIDIA Quadro RTX 6000") # if we cannot get GPU info, we assume it is a NVIDIA Quadro RTX 6000 (mid-range one)
+    "NVIDIA RTX A5000": (27.8, 222, 24, 758, "https://pnypartners.com/wp-content/uploads/nvidia-rtx-a5000-datasheet.pdf"),
+    None: (16.31, 32.62, 24, 672, "NVIDIA TITAN RTX") # if we cannot get GPU info, we assume it is a NVIDIA Quadro RTX 6000 (mid-range one)
 }
 
 
@@ -180,14 +182,10 @@ if args.mode == "condor":
 
     logging.warn("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
 
-                        
-"""
-
-if MODE == "lsf":
+if args.mode == "lsf":
 
   proc = subprocess.Popen(["lsload -gpuload -w"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
-
   out = out.decode("utf-8")
 
   ct = 0
@@ -197,6 +195,9 @@ if MODE == "lsf":
     if ct == 1:
       continue
     fields = l.split()
+
+    # first line with 13 fields, which contains machine name
+    #
     if len(fields) == 13:
       machine_name = fields[0]
       gpu_model = fields[2]
@@ -205,11 +206,13 @@ if MODE == "lsf":
       machines[machine_name]["gpu_model"] = gpu_model
       machines[machine_name]["n_gpu"] = 1
 
-      #devices[gpu_model] = 1
-
+    # following line does not have machine name, thus 12 columns
+    # 
     elif len(fields) == 12:
       machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
 
+  # for each machine, get its availability
+  #
   for machine_name in machines:
     proc = subprocess.Popen(["bhosts -l %s" % machine_name] , stdout=subprocess.PIPE, shell=True)
     (out, err) = proc.communicate()
@@ -225,10 +228,6 @@ if MODE == "lsf":
       avail = l.split()[4]
       machines[machine_name]["avail"] = float(avail)
       break
-
-print ("Total GPUs", total_gpus)  
-"""
-
 
 total_gpus = 0
 avail_gpus = 0
@@ -256,7 +255,6 @@ logging.warn("Total GPUs: %s", total_gpus)
 logging.warn("Avail GPUs: %s", avail_gpus)
 logging.warn("Total FP16: %s %s", total_fp16, "TFLOPS")
 logging.warn("Avail FP16: %s %s", avail_fp16, "TFLOPS")
-
 
 """
 import requests

@@ -299,8 +299,7 @@ res = requests.post('https://planetd.shift.ml/site_stats', json={
   "note": "string"
 })
 
-print (json={
-  "timestamp": time.time(),
+print ({"timestamp": time.time(),
   "site_identifier": args.site,
   "total_tflops": total_fp16,
   "avail_tflops": avail_fp16,

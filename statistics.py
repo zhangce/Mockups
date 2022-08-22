@@ -160,6 +160,8 @@ if args.mode == "condor":
       if gpuinfo is None: continue
       devicename = gpuinfo.get("DeviceName")
 
+      print(gpurepr, gpuinfo, devicename)
+
       machines[machine_name]["gpu_model"] = devicename
       machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
 

@@ -1,12 +1,12 @@
 
 import subprocess
 
-MODE = "slurm"
+MODE = "condor"
 
 machines = {}
 total_gpus = 0
 
-devices = {}
+#devices = {}
 
 # {u'titanxp': 1, u'titanrtx': 1, u'a5000': 1, u'3090': 1, u'titanx:2,gpu:titanxp': 1, u'titanx:1,gpu:2080ti': 1, u'titanx': 1, u'titanv': 1}
 
@@ -18,7 +18,13 @@ device_map = {
     "3090" : "NVIDIA GeForce RTX 3090"         ,
     "2080ti": "NVIDIA GeForce RTX 2080 Ti"        ,
     "titanx": "NVIDIA GeForce GTX TITAN X"       ,
-    "titanv": "NVIDIA TITAN V"
+    "titanv": "NVIDIA TITAN V" ,
+    "NVIDIA A100-PCIE-40GB": "NVIDIA A100 PCIe",
+    "NVIDIA A40": "NVIDIA A40 PCIe",
+    "Tesla V100-SXM2-16GB": "NVIDIA Tesla V100 SXM2 16 GB",
+    "Tesla P100-PCIE-16GB": "NVIDIA Tesla P100 PCIe 16 GB",
+    "NVIDIA A100-SXM4-40GB": "NVIDIA A100 SXM4 40 GB",
+    "NVIDIA Quadro RTX 6000": "NVIDIA Quadro RTX 6000"
 }
 
 # (FP32 TFLOPS, TENSOR TFLOPS, MEMORY GB, BANDWIDTH GB/S, SOURCE)
@@ -29,7 +35,13 @@ devices = {
     "NVIDIA GeForce RTX 3090": (35.58, 285, 24, 936, "https://wccftech.com/roundup/nvidia-geforce-rtx-3090-ti/"),
     "NVIDIA GeForce RTX 2080 Ti": (13.4, 114, 11, 616, "https://mightygadget.co.uk/nvidia-geforce-rtx-3080-vs-rtx-2080-ti/"),
     "NVIDIA GeForce GTX TITAN X": (6.691, 6.691, 12, 336.5, "https://www.nvidia.com/en-us/geforce/graphics-cards/geforce-gtx-titan-x/specifications/"),
-    "NVIDIA TITAN V": (14.90, 29.80, 12, 651.3, "https://www.techpowerup.com/gpu-specs/titan-v.c3051")
+    "NVIDIA TITAN V": (14.90, 29.80, 12, 651.3, "https://www.techpowerup.com/gpu-specs/titan-v.c3051"),
+    "NVIDIA A100 PCIe": (19.49, 312, 40, 1555, "https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a100/pdf/a100-80gb-datasheet-update-nvidia-us-1521051-r2-web.pdf"),
+    "NVIDIA A100 SXM4 40 GB": (19.49, 312, 40, 1555, "https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a100/pdf/a100-80gb-datasheet-update-nvidia-us-1521051-r2-web.pdf"),
+    "NVIDIA A40 PCIe": (37.4, 149.7, 48, 696, "https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf"),
+    "NVIDIA Tesla V100 SXM2 16 GB": (15.7, 125, 16, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf"),
+    "NVIDIA Tesla P100 PCIe 16 GB": (14, 112, 16, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf" ),
+    "NVIDIA Quadro RTX 6000": (16.3, 130.5, 24, 672, "https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/quadro-rtx-6000-us-nvidia-704093-r4-web.pdf")
 }
 
 if MODE == "slurm":
@@ -75,7 +87,7 @@ if MODE == "slurm":
                 machines[hostname]["n_gpu"] = ngpus
                 machines[hostname]["avail"] = ngpus - nalloc
 
-            devices[devicename] = 1
+            #devices[devicename] = 1
 
 
 if MODE == "condor":
@@ -108,7 +120,7 @@ if MODE == "condor":
 
 			print(machine_name, devicename)
 
-                        devices[devicename] = 1
+                        #devices[devicename] = 1
                         
 #print("######")
 
@@ -134,7 +146,7 @@ if MODE == "lsf":
       machines[machine_name]["gpu_model"] = gpu_model
       machines[machine_name]["n_gpu"] = 1
 
-      devices[gpu_model] = 1
+      #devices[gpu_model] = 1
 
     elif len(fields) == 12:
       machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
@@ -170,7 +182,7 @@ for machine_name in machines:
     print(machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp16)
   
 
-
+print devices
 
 
 """

@@ -22,6 +22,10 @@ parser.add_argument('site', choices={'stanford.edu', 'ethz.ch', 'osg-htc.org'})
 #
 parser.add_argument('--slurm-partition-prefixes', nargs='+')
 
+# On some clusters, it is not always possible to get all types of devices
+# Put the LOCAL (i.e., key of `device_map`) names of these device types here
+#
+parser.add_argument('--available-device-types', nargs='+')
 
 args = parser.parse_args()
 
@@ -92,6 +96,7 @@ devices = {
 if args.mode == "slurm":
 
   logging.warning("Slurm Cluster; Site %s; Partitions %s", args.site, args.slurm_partition_prefixes)
+  logging.warning("   filter device type: %s", args.available_device_types)
 
   proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -124,6 +129,9 @@ if args.mode == "slurm":
       devicename = m.group(1)
       ngpus = int(m.group(2))
 
+      if args.available_device_types is not None and devicename not in args.available_device_types:
+        continue
+
       nalloc = 0
       for i in range(2, len(jobs), 3):
         m = re.search(r'^gpu.*?:([0-9]*)$', jobs[i])
@@ -141,6 +149,7 @@ if args.mode == "slurm":
 if args.mode == "condor":
 
   logging.warning("Condor Cluster; Site %s", args.site)
+  logging.warning("   filter device type: %s", args.available_device_types)
 
   import htcondor
   coll = htcondor.Collector()
@@ -187,6 +196,9 @@ if args.mode == "condor":
       if machines[machine_name]["gpu_model"] is None:
         machines[machine_name]["gpu_model"] = gpuinfo.get("DeviceName")
 
+      if args.available_device_types is not None and machines[machine_name]["gpu_model"] not in args.available_device_types:
+        continue
+
       machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
 
     logging.warning("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
@@ -194,6 +206,7 @@ if args.mode == "condor":
 if args.mode == "lsf":
 
   logging.warning("LSF Cluster; Site %s", args.site)
+  logging.warning("   filter device type: %s", args.available_device_types)
 
   proc = subprocess.Popen(["lsload -gpuload -w"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -225,6 +238,11 @@ if args.mode == "lsf":
   # for each machine, get its availability
   #
   for machine_name in machines:
+
+    if args.available_device_types is not None and machines[machine_name]["gpu_model"] not in args.available_device_types:
+      machines[machine_name]["avail"] = 0
+      continue
+
     proc = subprocess.Popen(["bhosts -l %s" % machine_name] , stdout=subprocess.PIPE, shell=True)
     (out, err) = proc.communicate()
     out = out.decode("utf-8")

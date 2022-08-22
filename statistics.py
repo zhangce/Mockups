@@ -140,7 +140,7 @@ if args.mode == "condor":
       continue
 
     detected_gpus = ad.get("DetectedGPUs")
-    if detected_gpus is None: # if no detected GPUs
+    if detected_gpus is None or detected_gpus == 0: # if no detected GPUs
       continue
     detected_gpus = detected_gpus.split(", ")
 

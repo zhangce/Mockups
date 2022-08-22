@@ -119,7 +119,7 @@ if args.mode == "slurm":
         if m:
           nalloc = nalloc + int(m.group(1))
     
-      logging.warn("%s %s %s %s", hostname, devicename, ngpus, nalloc)
+      logging.warn("%s %s %s %s", hostname, devicename, ngpus, ngpus - nalloc)
 
       if hostname not in machines:
         machines[hostname] = {}
@@ -127,41 +127,56 @@ if args.mode == "slurm":
         machines[hostname]["n_gpu"] = ngpus
         machines[hostname]["avail"] = ngpus - nalloc
 
-"""
-
 if MODE == "condor":
-	import htcondor
-	coll = htcondor.Collector()
-	ads = coll.query()
 
-	for ad in ads:
-		avail_gpus = ad.get("AvailableGPUs")
-		if avail_gpus is None or avail_gpus == []:
-			continue
+  import htcondor
+  coll = htcondor.Collector()
+  ads = coll.query()
 
-		machine_name = ad.get("Name").__repr__()
-		for gpu in avail_gpus:
-			gpurepr = gpu.__repr__()
-			gpuinfo = ad.get(gpurepr)
+  for ad in ads:
 
-			if gpuinfo is None: continue
+    total_gpus = ad.get("TotalGPUs")
+    if total_gpus is None: # if no GPUs
+      continue
 
-			devicename = gpuinfo.get("DeviceName")
-			total_gpus = total_gpus  + 1
-			
-			if machine_name not in machines:
-				machines[machine_name] = {}
-				machines[machine_name]["gpu_model"] = devicename
-				machines[machine_name]["n_gpu"] = 0
-				machines[machine_name]["avail"] = 0
-			machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
-			machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
+    detected_gpus = ad.get("DetectedGPUs")
+    if detected_gpus is None: # if no detected GPUs
+      continue
+    detected_gpus = detected_gpus.split(", ")
 
-			print(machine_name, devicename)
+    machine_name = ad.get("Name").__repr__()
 
-                        #devices[devicename] = 1
+    if machine_name not in machines:
+      machines[machine_name] = {}
+      machines[machine_name]["gpu_model"] = None
+      machines[machine_name]["n_gpu"] = 0
+      machines[machine_name]["avail"] = 0
+
+    for gpu in detected_gpus:
+      gpurepr = gpu.__repr__()
+      gpuinfo = ad.get(gpurepr)
+      if gpuinfo is None: continue
+      devicename = gpuinfo.get("DeviceName")
+
+      machines[machine_name]["gpu_model"] = devicename
+      machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
+
+    avail_gpus = ad.get("AvailableGPUs")
+    if avail_gpus is None or avail_gpus == []:
+      continue
+
+    for gpu in avail_gpus:
+      gpurepr = gpu.__repr__()
+      gpuinfo = ad.get(gpurepr)
+
+      if gpuinfo is None: continue
+      
+      machines[machine_name]["avail"] = machines[machine_name]["avail"] + 1
+
+    logging.warn("%s %s %s %s", machine_name, machines[machine_name]["gpu_model"], machines[machine_name]["n_gpu"], machines[machine_name]["avail"])
+
                         
-#print("######")
+"""
 
 if MODE == "lsf":
 

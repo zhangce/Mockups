@@ -1,9 +1,11 @@
 
+from platform import machine
 import subprocess
 import argparse
 import logging
 import re
 
+import time
 
 parser = argparse.ArgumentParser(prog='statistics.py')
 
@@ -244,21 +246,40 @@ avail_gpus = 0
 total_fp16 = 0
 avail_fp16 = 0
 
+
+machines_available = {}
+
 for machine_name in machines:
   device = machines[machine_name]["gpu_model"]
   if device not in device_map:
     logging.warning("UNKNOWN DEVICES %s", device)
     continue
-  (fp32, fp16, mem, band, source) = devices[device_map[device]]
+
+  canonical_device = device_map[device]
+
+  (fp32, fp16, mem, band, source) = devices[canonical_device]
 
   total_gpus = total_gpus + machines[machine_name]["n_gpu"]
-  avail_gpus = avail_gpus + machines[machine_name]["avail"]
-
   total_fp16 = total_fp16 + fp16 * machines[machine_name]["n_gpu"]
-  avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-  if machines[machine_name]["avail"] > 0:
+  # these are resources that we can confidentally use
+  #
+  if device is not None and machines[machine_name]["avail"] > 0 :
+    avail_gpus = avail_gpus + machines[machine_name]["avail"]
+    avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
+
     logging.warning("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+
+    machines_available[machine_name] = {}
+    machines_available[machine_name]["gpu_model"] = device
+    machines_available[machine_name]["gpu_property"] = {
+      "fp32_tflops": fp32,
+      "fp16_tflops": fp16,
+      "memory": mem,
+      "bandwidth": band 
+    }
+    machines_available[machine_name]["total_gpus"] = machines[machine_name]["n_gpu"]
+    machines_available[machine_name]["avail_gpus"] = machines[machine_name]["avail"]
 
 logging.warning("Total GPUs: %s", total_gpus)
 logging.warning("Avail GPUs: %s", avail_gpus)
@@ -268,10 +289,23 @@ logging.warning("Avail FP16: %s %s", avail_fp16, "TFLOPS")
 
 import requests
 res = requests.post('https://planetd.shift.ml/site_stats', json={
-  "site_identifier": args.site   ,# "ethz.ch", # "osg-htc.org", # "stanford.edu", # ethz.ch; osg-htc.org
-  "total_perfs": avail_fp16,
-  "num_gpu": avail_gpus,
-  "num_cpu": 0,
+  "timestamp": time.time(),
+  "site_identifier": args.site,
+  "total_tflops": total_fp16,
+  "avail_tflops": avail_fp16,
+  "total_gpus": total_gpus,
+  "avail_gpus": avail_gpus,
+  "resources": machines_available,
   "note": "string"
 })
 
+print (json={
+  "timestamp": time.time(),
+  "site_identifier": args.site,
+  "total_tflops": total_fp16,
+  "avail_tflops": avail_fp16,
+  "total_gpus": total_gpus,
+  "avail_gpus": avail_gpus,
+  "resources": machines_available,
+  "note": "string"
+})

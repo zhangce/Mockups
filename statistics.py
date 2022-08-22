@@ -76,7 +76,7 @@ devices = {
     "NVIDIA GeForce GTX 1080 Ti": (11.34, 11.34, 11, 484, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877"),
     "NVIDIA GeForce GTX 1080": (8.873, 8.873, 8, 320, "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080.c2839"),
     "NVIDIA Tesla V100 SXM2 32 GB": (15.67, 125, 32, 900, "https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet-letter-fnl-web.pdf"),
-    None: (8.873, 8.873, 8, 320, "NVIDIA GeForce GTX 1080") # if we cannot get GPU info, we assume it is a weak one
+    None: (16.3, 130.5, 24, 672, "NVIDIA Quadro RTX 6000") # if we cannot get GPU info, we assume it is a NVIDIA Quadro RTX 6000 (mid-range one)
 }
 
 

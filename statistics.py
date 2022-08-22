@@ -81,7 +81,7 @@ devices = {
 
 if args.mode == "slurm":
 
-  logging.info("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
+  logger.info("Slurm Cluster; Partitions %s", args.slurm_partition_prefixes)
 
   proc = subprocess.Popen(["pestat -G"], stdout=subprocess.PIPE, shell=True)
   (out, err) = proc.communicate()
@@ -120,7 +120,7 @@ if args.mode == "slurm":
         if m:
           nalloc = nalloc + int(m.group(1))
     
-      logging.debug("%s %s %s %s", hostname, devicename, ngpus, nalloc)
+      logger.debug("%s %s %s %s", hostname, devicename, ngpus, nalloc)
 
       if hostname not in machines:
         machines[hostname] = {}
@@ -220,7 +220,7 @@ avail_fp16 = 0
 for machine_name in machines:
   device = machines[machine_name]["gpu_model"]
   if device not in device_map:
-    logging.warn("UNKNOWN DEVICES %s", device)
+    logger.warn("UNKNOWN DEVICES %s", device)
     continue
   (fp32, fp16, mem, band, source) = devices[device_map[device]]
 
@@ -230,12 +230,12 @@ for machine_name in machines:
   total_fp16 = total_fp16 + fp16 * machines[machine_name]["n_gpu"]
   avail_fp16 = avail_fp16 + fp16 * machines[machine_name]["avail"]
 
-  logging.debug("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
+  logger.debug("%s %s %s %s %s", machine_name, machines[machine_name]["n_gpu"], machines[machine_name]["avail"], fp32, fp16)
 
-logging.info("Total GPUs: %s", total_gpus)
-logging.info("Avail GPUs: %s", avail_gpus)
-logging.info("Total FP16: %s", total_fp16, "TFLOPS")
-logging.info("Avail FP16: %s", avail_fp16, "TFLOPS")
+logger.info("Total GPUs: %s", total_gpus)
+logger.info("Avail GPUs: %s", avail_gpus)
+logger.info("Total FP16: %s", total_fp16, "TFLOPS")
+logger.info("Avail FP16: %s", avail_fp16, "TFLOPS")
 
 
 """

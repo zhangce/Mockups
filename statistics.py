@@ -155,13 +155,13 @@ if args.mode == "condor":
       machines[machine_name]["avail"] = 0
 
     for gpu in detected_gpus:
+      machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
+
       gpurepr = gpu.__repr__()
       gpuinfo = ad.get(gpurepr)
       if gpuinfo is None: continue
       devicename = gpuinfo.get("DeviceName")
-
       machines[machine_name]["gpu_model"] = devicename
-      machines[machine_name]["n_gpu"] = machines[machine_name]["n_gpu"] + 1
 
     avail_gpus = ad.get("AvailableGPUs")
     if avail_gpus is None or avail_gpus == []:

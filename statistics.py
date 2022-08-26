@@ -15,7 +15,7 @@ parser.add_argument('mode',  choices={"slurm", "lsf", "condor"})
 
 # Identifier of each site 
 #
-parser.add_argument('site', choices={'stanford.edu', 'ethz.ch', 'osg-htc.org'})
+parser.add_argument('site', choices={'stanford.edu', 'ethz.ch', 'osg-htc.org', 'chtc.wisc.edu'})
 
 # If Slurm cluster, we can filter by the prefixes of 
 # a partition that can be used by Together

@@ -15,7 +15,129 @@ import io
 import base64
 import hashlib
 
+import asyncio
+
+import time
+
 import traceback
+
+### TOGETHER API ###
+
+from datetime import datetime
+import argparse
+import pycouchdb
+
+async def together_img(prompt, MODEL="stable_diffusion"):
+
+    db_server_address = "http://xzyao:agway-fondly-ell-hammer-flattered-coconut@db.yao.sh:5984/"
+
+    server = pycouchdb.Server(db_server_address)
+    db = server.database("global_coordinator")
+
+    inference_details = {
+        'inputs': prompt,
+        'model_name': MODEL,
+        'task_type': "image_generation",
+        "parameters": {
+            "max_new_tokens": 64,
+            "return_full_text": False,
+            "do_sample": True,
+            "temperature": 0.8,
+            "top_p": 0.95,
+            "max_time": 10.0,
+            "num_return_sequences": 1,
+            "use_gpu": True
+    },
+    'outputs': None
+    }
+
+    msg_dict = {
+        'job_type_info': 'latency_inference',
+        'job_state': 'job_queued',
+        'time': {
+            'job_queued_time': str(datetime.now()),
+            'job_start_time': None,
+            'job_end_time': None,
+            'job_returned_time': None
+        },
+        'task_api': inference_details
+    }
+    doc = db.save(msg_dict)
+    current_job_key = doc['_id']
+    print("Current key:", current_job_key)
+
+    for i in range(0, 60):
+
+        print (i)
+
+        doc = db.get(current_job_key)
+        
+        if doc['job_state'] == 'job_finished' or doc['job_state'] == 'job_returned':
+            doc['job_state'] = 'job_returned'
+            db.save(doc)
+            return (current_job_key, doc)
+
+        await asyncio.sleep(2)
+
+    return (current_job_key, None)
+
+
+async def together_text(prompt, max_tokens, temperature, top_p, MODEL="gpt-j-6B"):
+
+    db_server_address = "http://xzyao:agway-fondly-ell-hammer-flattered-coconut@db.yao.sh:5984/"
+
+    server = pycouchdb.Server(db_server_address)
+    db = server.database("global_coordinator")
+
+    inference_details = {
+        'inputs': prompt,
+        'model_name': MODEL,
+        'task_type': "seq_generation",
+        "parameters": {
+            "max_new_tokens": max_tokens,
+            "return_full_text": False,
+            "do_sample": True,
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_time": 10.0,
+            "num_return_sequences": 1,
+            "use_gpu": True
+    },
+    'outputs': None
+    }
+
+    msg_dict = {
+        'job_type_info': 'latency_inference',
+        'job_state': 'job_queued',
+        'time': {
+            'job_queued_time': str(datetime.now()),
+            'job_start_time': None,
+            'job_end_time': None,
+            'job_returned_time': None
+        },
+        'task_api': inference_details
+    }
+    doc = db.save(msg_dict)
+    current_job_key = doc['_id']
+    print("Current key:", current_job_key)
+
+    for i in range(0, 60):
+
+        print (i)
+
+        doc = db.get(current_job_key)
+        
+        if doc['job_state'] == 'job_finished' or doc['job_state'] == 'job_returned':
+            doc['job_state'] = 'job_returned'
+            db.save(doc)
+            return (current_job_key, doc)
+
+        await asyncio.sleep(2)
+
+    return (current_job_key, None)
+
+###
+
 
 def huggingface_img(prompt, MODEL="multimodalart/latentdiffusion",  API_TOKEN=""):
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
@@ -177,11 +299,8 @@ async def toma(
         default = "Text Generation"),
     model: discord.Option(str, description="Choose your model",
         choices=[
-            "Text: EleutherAI/gpt-neo-125M",
-            "Text: EleutherAI/gpt-neo-1.3B",
-            "Text: EleutherAI/gpt-neo-2.7B",
-            "Text: EleutherAI/gpt-j-6B",
-            "Image: multimodalart/latentdiffusion"
+            "Text: gpt-j-6B",
+            "Image: stable_diffusion"
         ],
         default = "default"),
     max_tokens: discord.Option(int, min_value=1, max_value=1024, required=False, description="(Text Generation) max_tokens"),
@@ -197,7 +316,7 @@ async def toma(
 
         try:
             if model == "default": 
-                model = "EleutherAI/gpt-j-6B"
+                model = "gpt-j-6B"
             else:
                 model = model.replace("Text: ", "")
 
@@ -207,14 +326,19 @@ async def toma(
 
             print ("     query hg " + model)
             print ("      /text= ", prompt) 
-            response = huggingface(prompt, max_tokens, temperature, top_p, MODEL=model)
-            print ("     /done" + response + "|")
-            if response.strip() == "": response = "<ALL SPACE STRING>"
+            #response = huggingface(prompt, max_tokens, temperature, top_p, MODEL=model)
+            (key, response) = await together_text(prompt, max_tokens, temperature, top_p, MODEL=model)
+            if response is None:
+                await ctx.send_followup(f"Something went wrong, please check job id={key}")
+                return            
+            responsetext = response["task_api"]["outputs"][0]
+            print ("     /done" + responsetext + "|")
+            if responsetext.strip() == "": responsetext = "<ALL SPACE STRING>"
 
             embed = discord.Embed(title="Text Generation Result", color=discord.Color.blurple())        
             embed.add_field(name=f"Prompts", value=f"{prompt}", inline=False)
 
-            embed.add_field(name=f"Response", value=f"{response}", inline=False)
+            embed.add_field(name=f"Response", value=responsetext, inline=False)
 
 #            embed.add_field(name=f"Feedback", value="""
 #                👍 => Good Result    👎 => Bad Result     🤣 => Funny Result
@@ -265,13 +389,28 @@ async def toma(
 
         try:
             if model == "default":
-                model = "multimodalart/latentdiffusion"
+                model = "stable_diffusion"
             else:
                 model = model.replace("Image: ", "")
 
             print ("     query hg img")
-            data = huggingface_img(prompt)
-            file = discord.File(io.BytesIO(base64.b64decode(data)), filename=hashlib.md5(data.encode()).hexdigest() + ".jpg")
+            # data = huggingface_img(prompt)
+            #file = discord.File(io.BytesIO(base64.b64decode(data)), filename=hashlib.md5(data.encode()).hexdigest() + ".jpg")
+            
+            (key, data) = await together_img(prompt, MODEL=model)
+            if data is None:
+                await ctx.send_followup(f"Something went wrong, please check job id={key}")
+                return       
+
+            print(data.keys())
+            files = []
+            filenames = []
+            for o in data["task_api"]["outputs"]:
+                files.append(discord.File(io.BytesIO(
+                    base64.b64decode(o.encode("ascii"))
+                ), filename=hashlib.md5(o.encode()).hexdigest() + ".jpg"))
+                filenames.append(hashlib.md5(o.encode()).hexdigest() + ".jpg")
+            
             print ("     /done")
             
             embed = discord.Embed(title=f"Image Generation Result", color=discord.Color.blurple())        
@@ -285,7 +424,7 @@ async def toma(
             embed.set_footer(text=f"# Generated with {model} by TOMA")
 
             view = FeedbackView()
-            msg = await ctx.send_followup(embeds=[embed], view=view, file=file)
+            msg = await ctx.send_followup(embeds=[embed], view=view, files=files)
 
             #permission = discord.Permissions()
 
@@ -319,18 +458,15 @@ async def toma(
 @bot.slash_command()
 async def tomato(
     ctx: discord.ApplicationContext,
-    prompt: discord.Option(str, description="Input your prompts or file link",
+    prompt: discord.Option(str, description="Input your prompts or file link", 
         name="prompts_or_link"),
     mode: discord.Option(str, description="Choose your mode",
         choices=["Text Generation", "Image Geneartion", "Batch Inference"],
         default = "Text Generation"),
     model: discord.Option(str, description="Choose your model",
         choices=[
-            "Text: EleutherAI/gpt-neo-125M",
-            "Text: EleutherAI/gpt-neo-1.3B",
-            "Text: EleutherAI/gpt-neo-2.7B",
-            "Text: EleutherAI/gpt-j-6B",
-            "Image: multimodalart/latentdiffusion"
+            "Text: gpt-j-6B",
+            "Image: stable_diffusion"
         ],
         default = "default"),
     max_tokens: discord.Option(int, min_value=1, max_value=1024, required=False, description="(Text Generation) max_tokens"),

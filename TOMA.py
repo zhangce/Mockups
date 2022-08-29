@@ -17,7 +17,7 @@ import hashlib
 
 import traceback
 
-def huggingface_img(prompt, MODEL="multimodalart/latentdiffusion",  API_TOKEN="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"):
+def huggingface_img(prompt, MODEL="multimodalart/latentdiffusion",  API_TOKEN=""):
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     API_URL = "https://hf.space/embed/" + MODEL + "/+/api/predict/"
     
@@ -27,7 +27,7 @@ def huggingface_img(prompt, MODEL="multimodalart/latentdiffusion",  API_TOKEN="h
     return r.json()["data"][0].split(",")[1]
 
 
-def huggingface(prompt, max_tokens, temperature, top_p, MODEL="EleutherAI/gpt-j-6B", API_TOKEN="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"):
+def huggingface(prompt, max_tokens, temperature, top_p, MODEL="EleutherAI/gpt-j-6B", API_TOKEN=""):
     
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     API_URL = "https://api-inference.huggingface.co/models/" + MODEL
@@ -44,11 +44,44 @@ def huggingface(prompt, max_tokens, temperature, top_p, MODEL="EleutherAI/gpt-j-
     })
     return data[0]["generated_text"]
 
-TOKEN = "MTAwOTg1MjA5OTE1NDE2OTg5Ng.GVdHTT.RMsPWoB9sEcQm6WhtjlKRmTxA3qOp6SJ-o7mcM"
+#TOKEN = "MTAwOTg1MjA5OTE1NDE2OTg5Ng.GVdHTT.RMsPWoB9sEcQm6WhtjlKRmTxA3qOp6SJ-o7mcM"
+#TOKEN = "MTAwOTg1MjA5OTE1NDE2OTg5Ng.GjxbOT.aejlnZCe6YuB-N51z6uaOjRNmNo3Z5m8DJn1yY"
+TOKEN = ""
 
 bot = discord.Bot()
 
 ### Start to Build the Bot
+
+class TOMAModel_Feedback(Modal):
+
+    def __init__(self) -> None:
+
+        super().__init__(title="TOMA: Provide Feedback")
+
+        self.add_item(
+            InputText(label="Better Response", placeholder = "Response",
+            style=discord.InputTextStyle.long)
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        
+        description = self.children[0].value
+
+        print (description, interaction.message)
+
+        await interaction.response.defer()
+
+
+class FeedbackView(discord.ui.View):
+
+    def __init__(self):
+        super().__init__(timeout=None) # timeout of the view must be set to None
+
+    @discord.ui.button(label="Submit a Better Reponse!", custom_id="button-submit", style=discord.ButtonStyle.primary, emoji="🚀")
+    async def button_callback_feedback(self, button, interaction):
+        modal = TOMAModel_Feedback()
+        await interaction.response.send_modal(modal)
+
 
 """
 class FeedbackView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
@@ -95,7 +128,7 @@ class FeedbackView(discord.ui.View): # Create a class called MyView that subclas
 
 @bot.event
 async def on_ready():
-    #bot.add_view(FeedbackView()) # Registers a View for persistent listening
+    bot.add_view(FeedbackView()) # Registers a View for persistent listening
     return
 
 class TOMAModel_Batch(Modal):
@@ -133,20 +166,21 @@ class TOMAModel_Batch(Modal):
 
         await interaction.response.send_message(embeds=[embed])
 
+
 @bot.slash_command()
 async def toma(
     ctx: discord.ApplicationContext,
-    mode: discord.Option(str, description="Choose your mode", 
-        choices=["Text Generation", "Image Geneartion", "Batch Inference"]),
     prompt: discord.Option(str, description="Input your prompts or file link", 
         name="prompts_or_link"),
+    mode: discord.Option(str, description="Choose your mode",
+        choices=["Text Generation", "Image Geneartion", "Batch Inference"],
+        default = "Text Generation"),
     model: discord.Option(str, description="Choose your model",
         choices=[
             "Text: EleutherAI/gpt-neo-125M",
             "Text: EleutherAI/gpt-neo-1.3B",
             "Text: EleutherAI/gpt-neo-2.7B",
             "Text: EleutherAI/gpt-j-6B",
-            "Text: EleutherAI/gpt-neox-20b",
             "Image: multimodalart/latentdiffusion"
         ],
         default = "default"),
@@ -171,25 +205,48 @@ async def toma(
             if temperature is None: temperature = 0.8
             if top_p is None: top_p = 0.95
 
-            print ("     query hg" + model)
+            print ("     query hg " + model)
             print ("      /text= ", prompt) 
             response = huggingface(prompt, max_tokens, temperature, top_p, MODEL=model)
-            print ("     /done")
+            print ("     /done" + response + "|")
+            if response.strip() == "": response = "<ALL SPACE STRING>"
 
             embed = discord.Embed(title="Text Generation Result", color=discord.Color.blurple())        
-            embed.add_field(name=f"Prompts: \"{prompt}\"", value=response, inline=False)
+            embed.add_field(name=f"Prompts", value=f"{prompt}", inline=False)
+
+            embed.add_field(name=f"Response", value=f"{response}", inline=False)
+
+#            embed.add_field(name=f"Feedback", value="""
+#                👍 => Good Result    👎 => Bad Result     🤣 => Funny Result
+#                🚫 => Not Appropriate / NSFW   😱 => Scary Result 
+#            """, inline=False)
 
             embed.add_field(name=f"Feedback", value="""
-                👍 => Good Result    👎 => Bad Result     🤣 => Funny Result
-                🚫 => Not Appropriate / NSFW   😱 => Scary Result 
+                👍 => Good   👎 => Bad   🤣 => Funny
+                🚫 => Inappropriate   😱 => Scary
             """, inline=False)
 
             embed.set_footer(text=f"# Generated with {model} by TOMA; (max_tokens={max_tokens}, temperature={temperature}, top_p={top_p})")
 
-            #view = FeedbackView()
-            msg = await ctx.send_followup(embeds=[embed])   #, view=view)
+            view = FeedbackView()
+            msg = await ctx.send_followup(embeds=[embed], view=view)
             #view.message = result
             #view.msg = result
+
+            #overwrite = discord.PermissionOverwrite()
+            #overwrite.add_reactions = True
+            #overwrite.read_messages = True
+            #await channel.set_permissions(member, overwrite=overwrite)
+            #
+            #await msg.channel.set_permissions(bot.user, read_messages=True, add_reactions=True)
+
+            #permission = discord.Permissions()
+            #permission.read_messages = True
+            #permission.add_reactions = True
+            #print (permission.read_messages)
+            #print (permission.add_reactions)
+            
+            #if permission.read_messages and permission.add_reactions:
 
             await msg.add_reaction('👍')
             await msg.add_reaction('👎')
@@ -218,17 +275,21 @@ async def toma(
             print ("     /done")
             
             embed = discord.Embed(title=f"Image Generation Result", color=discord.Color.blurple())        
-            embed.add_field(name=f"Prompts: \"{prompt}\"", value=file.filename, inline=False)
+            embed.add_field(name=f"Prompts", value=f"{prompt}", inline=False)
 
             embed.add_field(name=f"Feedback", value="""
-                👍 => Good Result    👎 => Bad Result     🤣 => Funny Result
-                🚫 => Not Appropriate / NSFW   😱 => Scary Result 
+                👍 => Good   👎 => Bad   🤣 => Funny
+                🚫 => Inappropriate   😱 => Scary
             """, inline=False)
 
             embed.set_footer(text=f"# Generated with {model} by TOMA")
 
-            msg = await ctx.send_followup(embeds=[embed], file=file)
+            view = FeedbackView()
+            msg = await ctx.send_followup(embeds=[embed], view=view, file=file)
 
+            #permission = discord.Permissions()
+
+            #if permission.read_messages and permission.add_reactions:
             await msg.add_reaction('👍')
             await msg.add_reaction('👎')
             await msg.add_reaction('🤣')
@@ -253,6 +314,107 @@ async def toma(
 
     else:
         await ctx.respond(f"Unknown mode: {mode}", view=FeedbackView())
+
+
+@bot.slash_command()
+async def tomato(
+    ctx: discord.ApplicationContext,
+    prompt: discord.Option(str, description="Input your prompts or file link",
+        name="prompts_or_link"),
+    mode: discord.Option(str, description="Choose your mode",
+        choices=["Text Generation", "Image Geneartion", "Batch Inference"],
+        default = "Text Generation"),
+    model: discord.Option(str, description="Choose your model",
+        choices=[
+            "Text: EleutherAI/gpt-neo-125M",
+            "Text: EleutherAI/gpt-neo-1.3B",
+            "Text: EleutherAI/gpt-neo-2.7B",
+            "Text: EleutherAI/gpt-j-6B",
+            "Image: multimodalart/latentdiffusion"
+        ],
+        default = "default"),
+    max_tokens: discord.Option(int, min_value=1, max_value=1024, required=False, description="(Text Generation) max_tokens"),
+    temperature: discord.Option(float, min_value=0, max_value=1, required=False, description="(Text Generation) temperature"),
+    top_p: discord.Option(float, min_value=0, max_value=1, required=False, description="(Text Generation) top_p")
+):
+    await toma(ctx, prompt, mode, model, max_tokens, temperature, top_p)
+
+
+
+
+@bot.slash_command()
+async def together(
+    ctx: discord.ApplicationContext,
+    command: discord.Option(str, description="Get status of current resources and usage", 
+        choices=["status"]),
+    *,
+    args = ""
+):
+    import requests
+    from dateutil import parser
+
+    await ctx.defer()
+
+    try:
+
+        x = requests.get('https://planetd.shift.ml/site_stats')
+
+        records = {}
+        for site in x.json():
+            site_identifier = site["site_identifier"]
+            avail_gpus = site["avail_gpus"]
+            total_gpus = site["total_gpus"]
+            avail_tflops = site["avail_tflops"]
+            total_tflops = site["total_tflops"]
+            created_at = parser.parse(site["created_at"])
+
+            if site_identifier not in records:
+                records[site_identifier] = (created_at, avail_gpus, total_gpus, avail_tflops, total_tflops)
+            else:
+                if created_at >= records[site_identifier][0]:
+                    records[site_identifier] = (created_at, avail_gpus, total_gpus, avail_tflops, total_tflops)
+
+        from table2ascii import table2ascii
+
+        header = ("SITE", "Total GPUs/TFLOPS", "Avail GPUs/TFLOPS")
+        body = []
+        sum_total_gpus = 0
+        sum_total_tflops = 0
+        sum_avail_gpus = 0
+        sum_avail_tflops = 0
+        min_time = None
+        max_time = None
+        for site_identifier in records:
+            (created_at, avail_gpus, total_gpus, avail_tflops, total_tflops) = records[site_identifier]
+            body.append((site_identifier, f"{int(total_gpus)}/{int(total_tflops)}", f"{int(avail_gpus)}/{int(avail_tflops)}"))
+            sum_total_gpus = sum_total_gpus + total_gpus
+            sum_total_tflops = sum_total_tflops + total_tflops
+            sum_avail_gpus = sum_avail_gpus + avail_gpus
+            sum_avail_tflops = sum_avail_tflops + avail_tflops
+
+            if min_time is None:
+                min_time = created_at
+                max_time = created_at
+
+            min_time = min(min_time, created_at)
+            max_time = max(max_time, created_at)
+
+        footer = ("SUM", f"{int(sum_total_gpus)}/{int(sum_total_tflops)}", f"{int(sum_avail_gpus)}/{int(sum_avail_tflops)}")
+
+        responds = table2ascii(
+            header=header,
+            body=body,
+            footer=footer,
+        )
+
+        responds = f"```Research Computer\n{responds}\n\nmin_time={min_time.utcnow()} UTC\nmax_time={max_time.utcnow()} UTC\n\n{args}```"
+        
+        await ctx.send_followup(f"{responds}")
+    
+    except Exception:
+        error =traceback.format_exc()
+        print(error)
+        await ctx.send_followup(f"sorry, something went wrong. \n\n ```{error}```")
 
 
 bot.run(TOKEN)
